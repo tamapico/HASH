@@ -2,6 +2,9 @@
 #include <stdio.h>
 
 // 参考
+// ・MD4
+// https://datatracker.ietf.org/doc/html/rfc1320
+// 
 // ・MD5
 // http://csrc.nist.gov/publications/fips/fips140-2/fips1402.pdf
 // http://www.ietf.org/rfc/rfc1321.txt
@@ -11,6 +14,7 @@
 // http://www.rfc-editor.org/rfc/rfc4634.txt
 // http://www.rfc-editor.org/rfc/rfc6234.txt
 
+// 定数
 DWORD MD5_T[64] =
 {
 	0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee, 0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
@@ -72,83 +76,30 @@ DWORD64 SHA384_512_K[80] =
 	0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817
 };
 
-DWORD MD5_INITIAL_HASH[4] =
-{
-	0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476
-};
+DWORD MD4_INITIAL_HASH[4] = { 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476 };
 
-DWORD SHA1_INITIAL_HASH[5] =
-{
-	0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0
-};
+DWORD MD5_INITIAL_HASH[4] = { 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476 };
 
-DWORD SHA224_INITIAL_HASH[8] =
-{
-	0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4
-};
+DWORD SHA1_INITIAL_HASH[5] = { 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0 };
 
-DWORD SHA256_INITIAL_HASH[8] =
-{
-	0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-};
+DWORD SHA224_INITIAL_HASH[8] = { 0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4 };
 
-DWORD64 SHA384_INITIAL_HASH[8] =
-{
-	0xcbbb9d5dc1059ed8, 0x629a292a367cd507, 0x9159015a3070dd17, 0x152fecd8f70e5939,
-	0x67332667ffc00b31, 0x8eb44a8768581511, 0xdb0c2e0d64f98fa7, 0x47b5481dbefa4fa4
-};
+DWORD SHA256_INITIAL_HASH[8] = { 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
 
-DWORD64 SHA512_INITIAL_HASH[8] =
-{
-	0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
-	0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179
-};
+DWORD64 SHA384_INITIAL_HASH[8] = { 0xcbbb9d5dc1059ed8, 0x629a292a367cd507, 0x9159015a3070dd17, 0x152fecd8f70e5939, 0x67332667ffc00b31, 0x8eb44a8768581511, 0xdb0c2e0d64f98fa7, 0x47b5481dbefa4fa4 };
 
-/* 変数 */
+DWORD64 SHA512_INITIAL_HASH[8] = { 0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1, 0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179 };
+
+// 変数
+DWORD64 MD4InBitsTotal;
 DWORD64 MD5InBitsTotal;
-DWORD64 SHA1_BitsTotal;
-DWORD64 SHA224_BitsTotal;
+DWORD64 SHA1InBitsTotal;
+DWORD64 SHA224InBitsTotal;
 DWORD64 SHA256InBitsTotal;
-DWORD64 SHA284_BitsTotal;
+DWORD64 SHA284InBitsTotal;
 DWORD64 SHA512InBitsTotal;
 
-/* 関数 */
-/* MD5 */
-DWORD WINAPI F(DWORD X, DWORD Y, DWORD Z)
-{
-	DWORD Ret;
-
-	Ret = X & Y | ~X & Z;
-
-	return Ret;
-}
-
-DWORD WINAPI G(DWORD X, DWORD Y, DWORD Z)
-{
-	DWORD Ret;
-
-	Ret = X & Z | Y & ~Z;
-
-	return Ret;
-}
-
-DWORD WINAPI H(DWORD X, DWORD Y, DWORD Z)
-{
-	DWORD Ret;
-
-	Ret = X ^ Y ^ Z;
-
-	return Ret;
-}
-
-DWORD WINAPI I(DWORD X, DWORD Y, DWORD Z)
-{
-	DWORD Ret;
-
-	Ret = Y ^ (X | ~Z);
-
-	return Ret;
-}
+// 関数
 
 DWORD WINAPI ROTL32(DWORD X, DWORD s)
 {
@@ -204,41 +155,343 @@ DWORD64 WINAPI SHR64(DWORD64 X, DWORD s)
 	return Ret;
 }
 
-DWORD WINAPI Round1(DWORD a, DWORD b, DWORD c, DWORD d, DWORD k, DWORD s, DWORD i, DWORD X[16])
+// MD4
+
+DWORD WINAPI MD4F(DWORD X, DWORD Y, DWORD Z)
 {
 	DWORD Ret;
 
-	Ret = a + F(b, c, d) + X[k] + MD5_T[i - 1];
+	Ret = (X & Y) | ((~X) & Z);
+
+	return Ret;
+}
+
+DWORD WINAPI MD4G(DWORD X, DWORD Y, DWORD Z)
+{
+	DWORD Ret;
+
+	Ret = (X & Y) | (X & Z) | (Y & Z);
+
+	return Ret;
+}
+
+DWORD WINAPI MD4H(DWORD X, DWORD Y, DWORD Z)
+{
+	DWORD Ret;
+
+	Ret = X ^ Y ^ Z;
+
+	return Ret;
+}
+
+DWORD WINAPI MD4Round1(DWORD a, DWORD b, DWORD c, DWORD d, DWORD k, DWORD s, DWORD X[16])
+{
+	DWORD Ret;
+
+	Ret = a + MD4F(b, c, d) + X[k];
+	Ret = ROTL32(Ret, s);
+
+	return Ret;
+}
+
+DWORD WINAPI MD4Round2(DWORD a, DWORD b, DWORD c, DWORD d, DWORD k, DWORD s, DWORD X[16])
+{
+	DWORD Ret;
+
+	Ret = a + MD4G(b, c, d) + X[k] + 0x5A827999;
+	Ret = ROTL32(Ret, s);
+
+	return Ret;
+}
+
+DWORD WINAPI MD4Round3(DWORD a, DWORD b, DWORD c, DWORD d, DWORD k, DWORD s, DWORD X[16])
+{
+	DWORD Ret;
+
+	Ret = a + MD4H(b, c, d) + X[k] + 0x6ED9EBA1;
+	Ret = ROTL32(Ret, s);
+
+	return Ret;
+}
+
+BOOL WINAPI MD4Update(BYTE M[64], BYTE ContextHash[16])
+{
+	DWORD X[16];
+	DWORD j;
+	DWORD A;
+	DWORD B;
+	DWORD C;
+	DWORD D;
+	DWORD AA;
+	DWORD BB;
+	DWORD CC;
+	DWORD DD;
+
+	A = (
+		(((DWORD)(ContextHash[3]) << 24) & 0xFF000000) |
+		(((DWORD)(ContextHash[2]) << 16) & 0x00FF0000) |
+		(((DWORD)(ContextHash[1]) << 8) & 0x0000FF00) |
+		(((DWORD)(ContextHash[0])) & 0x000000FF)
+		);
+	B = (
+		(((DWORD)(ContextHash[7]) << 24) & 0xFF000000) |
+		(((DWORD)(ContextHash[6]) << 16) & 0x00FF0000) |
+		(((DWORD)(ContextHash[5]) << 8) & 0x0000FF00) |
+		(((DWORD)(ContextHash[4])) & 0x000000FF)
+		);
+	C = (
+		(((DWORD)(ContextHash[11]) << 24) & 0xFF000000) |
+		(((DWORD)(ContextHash[10]) << 16) & 0x00FF0000) |
+		(((DWORD)(ContextHash[9]) << 8) & 0x0000FF00) |
+		(((DWORD)(ContextHash[8])) & 0x000000FF)
+		);
+	D = (
+		(((DWORD)(ContextHash[15]) << 24) & 0xFF000000) |
+		(((DWORD)(ContextHash[14]) << 16) & 0x00FF0000) |
+		(((DWORD)(ContextHash[13]) << 8) & 0x0000FF00) |
+		(((DWORD)(ContextHash[12])) & 0x000000FF)
+		);
+
+	AA = A;
+	BB = B;
+	CC = C;
+	DD = D;
+
+	for (j = 0; j < 16; j++)
+	{
+		X[j] = (
+			(((DWORD)(M[j * 4 + 3]) << 24) & 0xFF000000) |
+			(((DWORD)(M[j * 4 + 2]) << 16) & 0x00FF0000) |
+			(((DWORD)(M[j * 4 + 1]) << 8) & 0x0000FF00) |
+			(((DWORD)(M[j * 4])) & 0x000000FF)
+			);
+	}
+
+	/* MD4 Round1 */
+	A = MD4Round1(A, B, C, D, 0, 3, X);
+	D = MD4Round1(D, A, B, C, 1, 7, X);
+	C = MD4Round1(C, D, A, B, 2, 11, X);
+	B = MD4Round1(B, C, D, A, 3, 19, X);
+
+	A = MD4Round1(A, B, C, D, 4, 3, X);
+	D = MD4Round1(D, A, B, C, 5, 7, X);
+	C = MD4Round1(C, D, A, B, 6, 11, X);
+	B = MD4Round1(B, C, D, A, 7, 19, X);
+
+	A = MD4Round1(A, B, C, D, 8, 3, X);
+	D = MD4Round1(D, A, B, C, 9, 7, X);
+	C = MD4Round1(C, D, A, B, 10, 11, X);
+	B = MD4Round1(B, C, D, A, 11, 19, X);
+
+	A = MD4Round1(A, B, C, D, 12, 3, X);
+	D = MD4Round1(D, A, B, C, 13, 7, X);
+	C = MD4Round1(C, D, A, B, 14, 11, X);
+	B = MD4Round1(B, C, D, A, 15, 19, X);
+
+	/* MD4 Round2 */
+	A = MD4Round2(A, B, C, D, 0, 3, X);
+	D = MD4Round2(D, A, B, C, 4, 5, X);
+	C = MD4Round2(C, D, A, B, 8, 9, X);
+	B = MD4Round2(B, C, D, A, 12, 13, X);
+
+	A = MD4Round2(A, B, C, D, 1, 3, X);
+	D = MD4Round2(D, A, B, C, 5, 5, X);
+	C = MD4Round2(C, D, A, B, 9, 9, X);
+	B = MD4Round2(B, C, D, A, 13, 13, X);
+
+	A = MD4Round2(A, B, C, D, 2, 3, X);
+	D = MD4Round2(D, A, B, C, 6, 5, X);
+	C = MD4Round2(C, D, A, B, 10, 9, X);
+	B = MD4Round2(B, C, D, A, 14, 13, X);
+
+	A = MD4Round2(A, B, C, D, 3, 3, X);
+	D = MD4Round2(D, A, B, C, 7, 5, X);
+	C = MD4Round2(C, D, A, B, 11, 9, X);
+	B = MD4Round2(B, C, D, A, 15, 13, X);
+
+	/* MD5 Round3 */
+	A = MD4Round3(A, B, C, D, 0, 3, X);
+	D = MD4Round3(D, A, B, C, 8, 9, X);
+	C = MD4Round3(C, D, A, B, 4, 11, X);
+	B = MD4Round3(B, C, D, A, 12, 15, X);
+
+	A = MD4Round3(A, B, C, D, 2, 3, X);
+	D = MD4Round3(D, A, B, C, 10, 9, X);
+	C = MD4Round3(C, D, A, B, 6, 11, X);
+	B = MD4Round3(B, C, D, A, 14, 15, X);
+
+	A = MD4Round3(A, B, C, D, 1, 3, X);
+	D = MD4Round3(D, A, B, C, 9, 9, X);
+	C = MD4Round3(C, D, A, B, 5, 11, X);
+	B = MD4Round3(B, C, D, A, 13, 15, X);
+
+	A = MD4Round3(A, B, C, D, 3, 3, X);
+	D = MD4Round3(D, A, B, C, 11, 9, X);
+	C = MD4Round3(C, D, A, B, 7, 11, X);
+	B = MD4Round3(B, C, D, A, 15, 15, X);
+
+	A = A + AA;
+	B = B + BB;
+	C = C + CC;
+	D = D + DD;
+
+	*((DWORD*)&ContextHash[0]) = A;
+	*((DWORD*)&ContextHash[4]) = B;
+	*((DWORD*)&ContextHash[8]) = C;
+	*((DWORD*)&ContextHash[12]) = D;
+
+	return TRUE;
+}
+
+VOID WINAPI MD4(BYTE* in, DWORD64 cbitsIn, BOOL bInit, BOOL bFinish, BYTE* Hash) // BYTE Hash[16]
+{
+	BYTE i, M[64], HashCurrent[16];
+	DWORD64 cbitsRemain, cbRemain, cbCurrent, * lpdw64;
+	DWORD A, B, C, D, * lpdw;
+
+	if (bInit)
+	{
+		// Step 3. Initialize MD Buffer
+		A = MD4_INITIAL_HASH[0];
+		B = MD4_INITIAL_HASH[1];
+		C = MD4_INITIAL_HASH[2];
+		D = MD4_INITIAL_HASH[3];
+
+		lpdw = (DWORD*)HashCurrent;
+		lpdw[0] = A;
+		lpdw[1] = B;
+		lpdw[2] = C;
+		lpdw[3] = D;
+		MD4InBitsTotal = 0;
+	}
+	else
+	{
+		memcpy(HashCurrent, Hash, sizeof(HashCurrent));
+	}
+	MD4InBitsTotal += cbitsIn;
+
+	// Step 4. Process Message in 16-Word Blocks
+	for (cbCurrent = 0, cbRemain = cbitsIn / 8; cbRemain >= sizeof(M); cbCurrent += sizeof(M), cbRemain -= sizeof(M))
+	{
+		MD4Update(&in[cbCurrent], HashCurrent);
+	}
+
+	if (bFinish)
+	{
+		lpdw64 = (DWORD64*)M;
+
+		for (i = 0; i < 8; i++)
+		{
+			lpdw64[i] = 0;
+		}
+
+		// Step 1. Append Padding Bits
+		cbitsRemain = cbitsIn % 512;
+		cbRemain = cbitsRemain / 8;
+		memcpy(M, &in[cbCurrent], cbRemain);
+		cbCurrent += cbRemain;
+
+		if ((cbitsRemain % 8) > 0)
+		{
+			M[cbRemain] = in[cbCurrent];
+			M[cbRemain] |= ~(0x7f >> (cbitsRemain % 8));
+		}
+		else
+		{
+			M[cbRemain] = 0x80;
+		}
+
+		if (cbitsRemain >= 448)
+		{
+			MD4Update(M, HashCurrent);
+			memset(M, 0, sizeof(M) - 8);
+		}
+
+		// Step 2. Append Length
+		memcpy(&M[56], &MD4InBitsTotal, 8);
+
+		MD4Update(M, HashCurrent);
+	}
+
+	// Step 5. Output
+	memcpy(Hash, HashCurrent, sizeof(HashCurrent));
+
+	return;
+}
+
+// MD5
+
+DWORD WINAPI MD5F(DWORD X, DWORD Y, DWORD Z)
+{
+	DWORD Ret;
+
+	Ret = X & Y | ~X & Z;
+
+	return Ret;
+}
+
+DWORD WINAPI MD5G(DWORD X, DWORD Y, DWORD Z)
+{
+	DWORD Ret;
+
+	Ret = X & Z | Y & ~Z;
+
+	return Ret;
+}
+
+DWORD WINAPI MD5H(DWORD X, DWORD Y, DWORD Z)
+{
+	DWORD Ret;
+
+	Ret = X ^ Y ^ Z;
+
+	return Ret;
+}
+
+DWORD WINAPI MD5I(DWORD X, DWORD Y, DWORD Z)
+{
+	DWORD Ret;
+
+	Ret = Y ^ (X | ~Z);
+
+	return Ret;
+}
+
+DWORD WINAPI MD5Round1(DWORD a, DWORD b, DWORD c, DWORD d, DWORD k, DWORD s, DWORD i, DWORD X[16])
+{
+	DWORD Ret;
+
+	Ret = a + MD5F(b, c, d) + X[k] + MD5_T[i - 1];
 	Ret = ROTL32(Ret, s) + b;
 
 	return Ret;
 }
 
-DWORD WINAPI Round2(DWORD a, DWORD b, DWORD c, DWORD d, DWORD k, DWORD s, DWORD i, DWORD X[16])
+DWORD WINAPI MD5Round2(DWORD a, DWORD b, DWORD c, DWORD d, DWORD k, DWORD s, DWORD i, DWORD X[16])
 {
 	DWORD Ret;
 
-	Ret = a + G(b, c, d) + X[k] + MD5_T[i - 1];
+	Ret = a + MD5G(b, c, d) + X[k] + MD5_T[i - 1];
 	Ret = ROTL32(Ret, s) + b;
 
 	return Ret;
 }
 
-DWORD WINAPI Round3(DWORD a, DWORD b, DWORD c, DWORD d, DWORD k, DWORD s, DWORD i, DWORD X[16])
+DWORD WINAPI MD5Round3(DWORD a, DWORD b, DWORD c, DWORD d, DWORD k, DWORD s, DWORD i, DWORD X[16])
 {
 	DWORD Ret;
 
-	Ret = a + H(b, c, d) + X[k] + MD5_T[i - 1];
+	Ret = a + MD5H(b, c, d) + X[k] + MD5_T[i - 1];
 	Ret = ROTL32(Ret, s) + b;
 
 	return Ret;
 }
 
-DWORD WINAPI Round4(DWORD a, DWORD b, DWORD c, DWORD d, DWORD k, DWORD s, DWORD i, DWORD X[16])
+DWORD WINAPI MD5Round4(DWORD a, DWORD b, DWORD c, DWORD d, DWORD k, DWORD s, DWORD i, DWORD X[16])
 {
 	DWORD Ret;
 
-	Ret = a + I(b, c, d) + X[k] + MD5_T[i - 1];
+	Ret = a + MD5I(b, c, d) + X[k] + MD5_T[i - 1];
 	Ret = ROTL32(Ret, s) + b;
 
 	return Ret;
@@ -297,89 +550,89 @@ BOOL WINAPI MD5Update(BYTE M[64], BYTE ContextHash[16])
 			);
 	}
 
-	/* Round1 */
-	A = Round1(A, B, C, D, 0, 7, 1, X);
-	D = Round1(D, A, B, C, 1, 12, 2, X);
-	C = Round1(C, D, A, B, 2, 17, 3, X);
-	B = Round1(B, C, D, A, 3, 22, 4, X);
+	/* MD5 Round1 */
+	A = MD5Round1(A, B, C, D, 0, 7, 1, X);
+	D = MD5Round1(D, A, B, C, 1, 12, 2, X);
+	C = MD5Round1(C, D, A, B, 2, 17, 3, X);
+	B = MD5Round1(B, C, D, A, 3, 22, 4, X);
 
-	A = Round1(A, B, C, D, 4, 7, 5, X);
-	D = Round1(D, A, B, C, 5, 12, 6, X);
-	C = Round1(C, D, A, B, 6, 17, 7, X);
-	B = Round1(B, C, D, A, 7, 22, 8, X);
+	A = MD5Round1(A, B, C, D, 4, 7, 5, X);
+	D = MD5Round1(D, A, B, C, 5, 12, 6, X);
+	C = MD5Round1(C, D, A, B, 6, 17, 7, X);
+	B = MD5Round1(B, C, D, A, 7, 22, 8, X);
 
-	A = Round1(A, B, C, D, 8, 7, 9, X);
-	D = Round1(D, A, B, C, 9, 12, 10, X);
-	C = Round1(C, D, A, B, 10, 17, 11, X);
-	B = Round1(B, C, D, A, 11, 22, 12, X);
+	A = MD5Round1(A, B, C, D, 8, 7, 9, X);
+	D = MD5Round1(D, A, B, C, 9, 12, 10, X);
+	C = MD5Round1(C, D, A, B, 10, 17, 11, X);
+	B = MD5Round1(B, C, D, A, 11, 22, 12, X);
 
-	A = Round1(A, B, C, D, 12, 7, 13, X);
-	D = Round1(D, A, B, C, 13, 12, 14, X);
-	C = Round1(C, D, A, B, 14, 17, 15, X);
-	B = Round1(B, C, D, A, 15, 22, 16, X);
+	A = MD5Round1(A, B, C, D, 12, 7, 13, X);
+	D = MD5Round1(D, A, B, C, 13, 12, 14, X);
+	C = MD5Round1(C, D, A, B, 14, 17, 15, X);
+	B = MD5Round1(B, C, D, A, 15, 22, 16, X);
 
-	/* Round2 */
-	A = Round2(A, B, C, D, 1, 5, 17, X);
-	D = Round2(D, A, B, C, 6, 9, 18, X);
-	C = Round2(C, D, A, B, 11, 14, 19, X);
-	B = Round2(B, C, D, A, 0, 20, 20, X);
+	/* MD5 Round2 */
+	A = MD5Round2(A, B, C, D, 1, 5, 17, X);
+	D = MD5Round2(D, A, B, C, 6, 9, 18, X);
+	C = MD5Round2(C, D, A, B, 11, 14, 19, X);
+	B = MD5Round2(B, C, D, A, 0, 20, 20, X);
 
-	A = Round2(A, B, C, D, 5, 5, 21, X);
-	D = Round2(D, A, B, C, 10, 9, 22, X);
-	C = Round2(C, D, A, B, 15, 14, 23, X);
-	B = Round2(B, C, D, A, 4, 20, 24, X);
+	A = MD5Round2(A, B, C, D, 5, 5, 21, X);
+	D = MD5Round2(D, A, B, C, 10, 9, 22, X);
+	C = MD5Round2(C, D, A, B, 15, 14, 23, X);
+	B = MD5Round2(B, C, D, A, 4, 20, 24, X);
 
-	A = Round2(A, B, C, D, 9, 5, 25, X);
-	D = Round2(D, A, B, C, 14, 9, 26, X);
-	C = Round2(C, D, A, B, 3, 14, 27, X);
-	B = Round2(B, C, D, A, 8, 20, 28, X);
+	A = MD5Round2(A, B, C, D, 9, 5, 25, X);
+	D = MD5Round2(D, A, B, C, 14, 9, 26, X);
+	C = MD5Round2(C, D, A, B, 3, 14, 27, X);
+	B = MD5Round2(B, C, D, A, 8, 20, 28, X);
 
-	A = Round2(A, B, C, D, 13, 5, 29, X);
-	D = Round2(D, A, B, C, 2, 9, 30, X);
-	C = Round2(C, D, A, B, 7, 14, 31, X);
-	B = Round2(B, C, D, A, 12, 20, 32, X);
+	A = MD5Round2(A, B, C, D, 13, 5, 29, X);
+	D = MD5Round2(D, A, B, C, 2, 9, 30, X);
+	C = MD5Round2(C, D, A, B, 7, 14, 31, X);
+	B = MD5Round2(B, C, D, A, 12, 20, 32, X);
 
-	/* Round3 */
-	A = Round3(A, B, C, D, 5, 4, 33, X);
-	D = Round3(D, A, B, C, 8, 11, 34, X);
-	C = Round3(C, D, A, B, 11, 16, 35, X);
-	B = Round3(B, C, D, A, 14, 23, 36, X);
+	/* MD5 Round3 */
+	A = MD5Round3(A, B, C, D, 5, 4, 33, X);
+	D = MD5Round3(D, A, B, C, 8, 11, 34, X);
+	C = MD5Round3(C, D, A, B, 11, 16, 35, X);
+	B = MD5Round3(B, C, D, A, 14, 23, 36, X);
 
-	A = Round3(A, B, C, D, 1, 4, 37, X);
-	D = Round3(D, A, B, C, 4, 11, 38, X);
-	C = Round3(C, D, A, B, 7, 16, 39, X);
-	B = Round3(B, C, D, A, 10, 23, 40, X);
+	A = MD5Round3(A, B, C, D, 1, 4, 37, X);
+	D = MD5Round3(D, A, B, C, 4, 11, 38, X);
+	C = MD5Round3(C, D, A, B, 7, 16, 39, X);
+	B = MD5Round3(B, C, D, A, 10, 23, 40, X);
 
-	A = Round3(A, B, C, D, 13, 4, 41, X);
-	D = Round3(D, A, B, C, 0, 11, 42, X);
-	C = Round3(C, D, A, B, 3, 16, 43, X);
-	B = Round3(B, C, D, A, 6, 23, 44, X);
+	A = MD5Round3(A, B, C, D, 13, 4, 41, X);
+	D = MD5Round3(D, A, B, C, 0, 11, 42, X);
+	C = MD5Round3(C, D, A, B, 3, 16, 43, X);
+	B = MD5Round3(B, C, D, A, 6, 23, 44, X);
 
-	A = Round3(A, B, C, D, 9, 4, 45, X);
-	D = Round3(D, A, B, C, 12, 11, 46, X);
-	C = Round3(C, D, A, B, 15, 16, 47, X);
-	B = Round3(B, C, D, A, 2, 23, 48, X);
+	A = MD5Round3(A, B, C, D, 9, 4, 45, X);
+	D = MD5Round3(D, A, B, C, 12, 11, 46, X);
+	C = MD5Round3(C, D, A, B, 15, 16, 47, X);
+	B = MD5Round3(B, C, D, A, 2, 23, 48, X);
 
-	/* Round4 */
-	A = Round4(A, B, C, D, 0, 6, 49, X);
-	D = Round4(D, A, B, C, 7, 10, 50, X);
-	C = Round4(C, D, A, B, 14, 15, 51, X);
-	B = Round4(B, C, D, A, 5, 21, 52, X);
+	/* MD5 Round4 */
+	A = MD5Round4(A, B, C, D, 0, 6, 49, X);
+	D = MD5Round4(D, A, B, C, 7, 10, 50, X);
+	C = MD5Round4(C, D, A, B, 14, 15, 51, X);
+	B = MD5Round4(B, C, D, A, 5, 21, 52, X);
 
-	A = Round4(A, B, C, D, 12, 6, 53, X);
-	D = Round4(D, A, B, C, 3, 10, 54, X);
-	C = Round4(C, D, A, B, 10, 15, 55, X);
-	B = Round4(B, C, D, A, 1, 21, 56, X);
+	A = MD5Round4(A, B, C, D, 12, 6, 53, X);
+	D = MD5Round4(D, A, B, C, 3, 10, 54, X);
+	C = MD5Round4(C, D, A, B, 10, 15, 55, X);
+	B = MD5Round4(B, C, D, A, 1, 21, 56, X);
 
-	A = Round4(A, B, C, D, 8, 6, 57, X);
-	D = Round4(D, A, B, C, 15, 10, 58, X);
-	C = Round4(C, D, A, B, 6, 15, 59, X);
-	B = Round4(B, C, D, A, 13, 21, 60, X);
+	A = MD5Round4(A, B, C, D, 8, 6, 57, X);
+	D = MD5Round4(D, A, B, C, 15, 10, 58, X);
+	C = MD5Round4(C, D, A, B, 6, 15, 59, X);
+	B = MD5Round4(B, C, D, A, 13, 21, 60, X);
 
-	A = Round4(A, B, C, D, 4, 6, 61, X);
-	D = Round4(D, A, B, C, 11, 10, 62, X);
-	C = Round4(C, D, A, B, 2, 15, 63, X);
-	B = Round4(B, C, D, A, 9, 21, 64, X);
+	A = MD5Round4(A, B, C, D, 4, 6, 61, X);
+	D = MD5Round4(D, A, B, C, 11, 10, 62, X);
+	C = MD5Round4(C, D, A, B, 2, 15, 63, X);
+	B = MD5Round4(B, C, D, A, 9, 21, 64, X);
 
 	A = A + AA;
 	B = B + BB;
@@ -692,13 +945,13 @@ VOID WINAPI SHA1(BYTE* in, DWORD64 cbitsIn, BOOL bInit, BOOL bFinish, DWORD* Has
 		HashCurrent[2] = SHA1_INITIAL_HASH[2];
 		HashCurrent[3] = SHA1_INITIAL_HASH[3];
 		HashCurrent[4] = SHA1_INITIAL_HASH[4];
-		SHA1_BitsTotal = 0;
+		SHA1InBitsTotal = 0;
 	}
 	else
 	{
 		memcpy(HashCurrent, Hash, sizeof(HashCurrent));
 	}
-	SHA1_BitsTotal += cbitsIn;
+	SHA1InBitsTotal += cbitsIn;
 
 	for (cbCurrent = 0, cbRemain = cbitsIn / 8; cbRemain >= sizeof(M); cbCurrent += sizeof(M), cbRemain -= sizeof(M))
 	{
@@ -735,7 +988,7 @@ VOID WINAPI SHA1(BYTE* in, DWORD64 cbitsIn, BOOL bInit, BOOL bFinish, DWORD* Has
 			memset(M, 0, sizeof(M) - 8);
 		}
 
-		lpTotalBits = (LPBYTE)&SHA1_BitsTotal;
+		lpTotalBits = (LPBYTE)&SHA1InBitsTotal;
 		M[56] = lpTotalBits[7];
 		M[57] = lpTotalBits[6];
 		M[58] = lpTotalBits[5];
@@ -1197,6 +1450,37 @@ ULONG64 WINAPI CRC(BYTE* in, ULONG64 cbitsIn, ULONG64 crcInit, ULONG64 poly, ULO
 
 INT main(INT argc, CHAR* argv[])
 {
+	// MD4
+	// MD4 test suite :
+	// MD4("") = 31d6cfe0d16ae931b73c59d7e0c089c0
+	// MD4("a") = bde52cb31de33e46245e05fbdbd6fb24
+	// MD4("abc") = a448017aaf21d8525fc10ae87aa6729d
+	// MD4("message digest") = d9130a8164549fe818874806e1c7014b
+	// MD4("abcdefghijklmnopqrstuvwxyz") = d79e1c308aa5bbcdeea8ed63df412da9
+	// MD4("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") = 043f8582f241db351ce627e153e7f0e4
+	// MD4("12345678901234567890123456789012345678901234567890123456789012345678901234567890") = e33b4ddc9c38f2199c3e7b164fcc0536
+	BYTE MD4_Hash[16];
+	BYTE* MD4_Example1 = NULL;
+	MD4(MD4_Example1, 0, TRUE, TRUE, MD4_Hash);
+
+	BYTE MD4_Example2[] = { 'a' };
+	MD4(MD4_Example2, 8, TRUE, TRUE, MD4_Hash);
+
+	BYTE MD4_Example3[] = "abc";
+	MD4(MD4_Example3, 24, TRUE, TRUE, MD4_Hash);
+
+	BYTE MD4_Example4[] = "message digest";
+	MD4(MD4_Example4, 14 * 8, TRUE, TRUE, MD4_Hash);
+
+	BYTE MD4_Example5[] = "abcdefghijklmnopqrstuvwxyz";
+	MD4(MD4_Example5, 26 * 8, TRUE, TRUE, MD4_Hash);
+
+	BYTE MD4_Example6[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	MD4(MD4_Example6, 62 * 8, TRUE, TRUE, MD4_Hash);
+
+	BYTE MD4_Example7[] = "12345678901234567890123456789012345678901234567890123456789012345678901234567890";
+	MD4(MD4_Example7, 80 * 8, TRUE, TRUE, MD4_Hash);
+
 	// MD5
 	// MD5 test suite :
 	// MD5("") = d41d8cd98f00b204e9800998ecf8427e
